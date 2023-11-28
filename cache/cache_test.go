@@ -2,47 +2,27 @@ package cache
 
 import (
 	"fmt"
-	"log"
+	"gogocache/mysqldb"
 	"testing"
 )
 
 var db = map[string]string{
-	"Tom":  "630",
-	"Jack": "589",
-	"Sam":  "567",
-}
-
-type DB struct{ url string }
-
-func (db *DB) Query(sql string, args ...string) string {
-	// ...
-	return "hello"
-}
-
-func (db *DB) Get(key string) ([]byte, error) {
-	// ...
-	v := db.Query("SELECT NAME FROM TABLE WHEN NAME= ?", key)
-	return []byte(v), nil
+	"John Doe":      "123-456-7890",
+	"Jane Smith":    "987-654-3210",
+	"Alice Johnson": "555-123-4567",
 }
 
 func TestGet(t *testing.T) {
 	loadCounts := make(map[string]int, len(db))
+	dataSourceName := "root@tcp(localhost:3306)/gogocache"
+	myDB, err := mysqldb.NewDB(dataSourceName)
+	if err != nil {
+		fmt.Println("Error connecting to the database:", err)
+		return
+	}
+	defer myDB.Close()
 
-	// gogo := NewGroup("A", 2 << 1-0,  new(DB))
-
-	gee := NewGroup("scores", 2<<10, GetterFunc(
-		func(key string) ([]byte, error) {
-			log.Println("[SlowDB] search key", key)
-			if v, ok := db[key]; ok {
-				if _, ok := loadCounts[key]; !ok {
-					loadCounts[key] = 0
-				}
-				loadCounts[key] += 1
-				return []byte(v), nil
-			}
-			return nil, fmt.Errorf("%s not exist", key)
-		}))
-
+	gee := NewGroup("contacts", 2<<10, myDB)
 	for k, v := range db {
 		if view, err := gee.Get(k); err != nil || view.Value() != v {
 			t.Fatal("failed to get value of Tom")
@@ -52,7 +32,7 @@ func TestGet(t *testing.T) {
 		} // cache hit
 	}
 
-	if view, err := gee.Get("unknown"); err == nil {
+	if view, err := gee.Get("unknown"); err != nil {
 		t.Fatalf("the value of unknow should be empty, but %s got", view)
 	}
 }

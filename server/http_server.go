@@ -3,12 +3,15 @@ package server
 import (
 	"fmt"
 	"gogocache/cache"
+	pb "gogocache/cachepb"
 	"gogocache/client"
 	"gogocache/hash"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
+
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -72,10 +75,11 @@ func (h *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view, err := group.Get(key)
+	body, err := proto.Marshal(&pb.Response{Value: view.ByteSlice()})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(view.ByteSlice())
+	w.Write(body)
 }

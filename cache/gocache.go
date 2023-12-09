@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	pb "gogocache/cachepb"
 	"gogocache/client"
 	"gogocache/singleflight"
 	"log"
@@ -98,12 +99,25 @@ func (group *Group) Load(key string) (ByteView, error) {
 	return ByteView{}, err
 }
 
+// func (g *Group) getFromPeer(peer client.PeerGetter, key string) (ByteView, error) {
+// 	bytes, err := peer.Get(g.name, key)
+// 	if err != nil {
+// 		return ByteView{}, err
+// 	}
+// 	return ByteView{data: bytes}, nil
+// }
+
 func (g *Group) getFromPeer(peer client.PeerGetter, key string) (ByteView, error) {
-	bytes, err := peer.Get(g.name, key)
+	req := &pb.Request{
+		Group: g.name,
+		Key:   key,
+	}
+	res := &pb.Response{}
+	err := peer.Get(req, res)
 	if err != nil {
 		return ByteView{}, err
 	}
-	return ByteView{data: bytes}, nil
+	return ByteView{data: res.Value}, nil
 }
 
 func (group *Group) getFromLocal(key string) (ByteView, error) {
